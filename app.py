@@ -324,28 +324,6 @@ def update_status():
     }
 
 
-@app.route('/update_contact_status', methods=['POST'])
-def update_contact_status():
-    data = request.json
-    login = data['user_login']
-    contact_login = data['contact_login']
-    new_status = data['new_status']
-    user = find_user_by_login(login)
-    if user != 0:
-        for contact in user['contacts']:
-            if contact['login'] == contact_login:
-                contact['status'] = new_status
-    for u in users:
-        for c in u['contacts']:
-            if c['login'] == login:
-                c['status'] = new_status
-
-    return {
-        'login': login,
-        'status': new_status
-    }
-
-
 @app.route('/update_chat_last_message', methods=['POST'])
 def update_chat_last_message():
     data = request.json
