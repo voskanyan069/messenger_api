@@ -4,6 +4,9 @@ import time
 app = Flask(__name__)
 users = []
 messages = []
+chats = {}
+contacts = {}
+calls = {}
 stories = {}
 user_id = 0
 
@@ -43,7 +46,7 @@ def get_messages(chat_name):
 def get_contacts(login):
     user = find_user_by_login(login)
     if user != 0:
-        return {'contacts': user['contacts']}
+        return {'contacts': contacts[login]}
     return {'error': 'user not find', 'code': 1}
 
 
@@ -59,7 +62,7 @@ def get_online_status(login):
 def get_chats(login):
     user = find_user_by_login(login)
     if user != 0:
-        return {'chats': user['chats']}
+        return {'chats': chats[login]}
     return {'error': 'user not find', 'code': 1}
 
 
@@ -80,7 +83,7 @@ def get_stories_login(login):
 def get_calls(login):
     user = find_user_by_login(login)
     if user != 0:
-        return {'calls': user['calls']}
+        return {'calls': calls[login]}
     return {'error': 'user not find', 'code': 1}
 
 
@@ -104,11 +107,12 @@ def add_user():
                          '=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=675&q'
                          '=80',
         'status': 'online',
-        'contacts': [],
-        'calls': [],
-        'chats': []
     })
+    contacts[login] = []
     stories[login] = []
+    calls[login] = []
+    chats[login] = []
+
     user_id += 1
     return {
         'login': login,
@@ -128,10 +132,10 @@ def add_contact():
     user = find_user_by_login(user_login)
     contact = find_user_by_login(contact_login)
     if user != 0 and contact != 0:
-        for cont in user['contacts']:
+        for cont in contacts[user_login]:
             if cont['login'] == contact_login:
                 return {'error': 'the contact was contains', 'code': 5}
-        user['contacts'] += [
+        contacts[user_login] += [
             {
                 'login': contact['login'],
                 'username': contact['username'],
@@ -149,6 +153,7 @@ def add_contact():
     return {'error': 'user not find', 'code': 1}
 
 
+# TODO
 @app.route('/send_message', methods=['POST'])
 def add_message():
     data = request.json
@@ -169,15 +174,16 @@ def add_chats():
     user = find_user_by_login(user_login)
     contact = find_user_by_login(contact_login)
     if user != 0 and contact != 0:
-        for chat in user['chats']:
+        for chat in chats[user_login]:
             if chat['login'] == contact_login:
                 return {'error': 'the chat was contains', 'code': 9}
-        user['chats'] += [
+        chats[user_login] += [
             {
                 'login': contact['login'],
                 'username': contact['username'],
                 'profile_image': contact['profile_image'],
-                'last_msg': last_msg
+                'last_msg': last_msg,
+                'messages': []
             }
         ]
         return {
@@ -217,7 +223,7 @@ def add_calls():
     user = find_user_by_login(user_login)
     contact = find_user_by_login(contact_login)
     if user != 0 and contact != 0:
-        user['calls'] += [
+        calls[user_login] += [
             {
                 'login': contact['login'],
                 'username': contact['username'],
@@ -240,13 +246,12 @@ def add_calls():
 def delete_user():
     data = request.json
     user_login = data['user_login']
-    for i in range(len(users)):
-        for contact in users[i]['contacts']:
-            if contact['login'] == user_login:
-                contact['login'] = 'Deleted account'
-        if users[i]['login'] == user_login:
-            users.pop(i)
-
+    for contact in contacts:
+        if contact['login'] == user_login:
+            contact['login'] = 'Deleted account'
+    for user in users:
+        if user['login'] == user_login:
+            users.pop(user)
     return {'login': user_login}
 
 
@@ -257,9 +262,9 @@ def delete_contact():
     contact_login = data['contact_login']
     user = find_user_by_login(user_login)
     if user != 0:
-        for j in range(len(user['contacts'])):
-            if user['contacts'][j]['login'] == contact_login:
-                user['contacts'].pop(j)
+        for contact in contacts:
+            if contact['login'] == contact_login:
+                contacts.pop(contact)
                 break
     return {
         'login': user_login,
@@ -275,12 +280,11 @@ def update_username():
     user = find_user_by_login(user_login)
     if user != 0:
         user['username'] = new_username
-    for i in range(len(users)):
-        for j in range(len(users[i]['contacts'])):
-            user_contact = users[i]['contacts'][j]
-            if user_contact['login'] == user_login:
-                user_contact['username'] = new_username
-
+    print(contacts)
+    for contact in contacts:
+        for cont in contacts[contact]:
+            if cont['login'] == user_login:
+                cont['username'] = new_username
     return {
         'login': user_login,
         'username': new_username
@@ -310,11 +314,10 @@ def update_status():
     user = find_user_by_login(login)
     if user != 0:
         user['status'] = new_status
-    for u in users:
-        for c in u['contacts']:
-            if c['login'] == login:
-                c['status'] = new_status
-
+    for contact in contacts:
+        for cont in contacts[contact]:
+            if cont['login'] == login:
+                cont['status'] = new_status
     return {
         'login': login,
         'status': new_status
@@ -352,9 +355,7 @@ def update_chat_last_message():
     user = find_user_by_login(login)
     if user != 0:
         for chat in user['chats']:
-            print(chat)
             if chat['login'] == chat_name:
-                print('equals')
                 chat['last_msg'] = new_last_msg
     return {
         'login': login,
