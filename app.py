@@ -4,31 +4,31 @@ import time
 app = Flask(__name__)
 users = []
 messages = []
-stories = []
+stories = {}
 user_id = 0
 
 
 @app.route('/')
 def get_server_status():
     return {
-        "running": True,
-        "date": time.time(),
-        "users_count": len(users),
-        "messages_count": len(messages)
+        'running': True,
+        'date': time.time(),
+        'users_count': len(users),
+        'messages_count': len(messages)
     }
 
 
 @app.route('/get_users')
 def get_users():
-    return {"users": users}
+    return {'users': users}
 
 
 @app.route('/get_user/<login>')
 def get_user(login):
     user = find_user_by_login(login)
     if user != 0:
-        return {"user": user}
-    return {"error": "user not find", "code": 1}
+        return {'user': user}
+    return {'error': 'user not find', 'code': 1}
 
 
 @app.route('/get_messages/<chat_name>')
@@ -36,52 +36,52 @@ def get_messages(chat_name):
     last_message = float(request.args['last_message'])
     ret_data = [message for message in messages if chat_name == message['chat_name']]
     ret_data = [message for message in ret_data if last_message < message['time']]
-    return {"messages": ret_data}
+    return {'messages': ret_data}
 
 
 @app.route('/get_contacts/<login>')
 def get_contacts(login):
     user = find_user_by_login(login)
     if user != 0:
-        return {"contacts": user['contacts']}
-    return {"error": "user not find", "code": 1}
+        return {'contacts': user['contacts']}
+    return {'error': 'user not find', 'code': 1}
 
 
 @app.route('/get_status/<login>')
 def get_online_status(login):
     user = find_user_by_login(login)
     if user != 0:
-        return {"status": user['status']}
-    return {"error": "user not find", "code": 1}
+        return {'status': user['status']}
+    return {'error': 'user not find', 'code': 1}
 
 
 @app.route('/get_chats/<login>')
 def get_chats(login):
     user = find_user_by_login(login)
     if user != 0:
-        return {"chats": user['chats']}
-    return {"error": "user not find", "code": 1}
+        return {'chats': user['chats']}
+    return {'error': 'user not find', 'code': 1}
 
 
 @app.route('/get_stories')
 def get_stories():
-    return {"stories": stories}
+    return {'stories': stories}
 
 
 @app.route('/get_stories/<login>')
 def get_stories_login(login):
     story = find_stories_by_login(login)
     if story != 0:
-        return {"stories": stories}
-    return {"error": "stories not find", "code": 8}
+        return {'stories': stories}
+    return {'error': 'stories not find', 'code': 8}
 
 
 @app.route('/get_calls/<login>')
 def get_calls(login):
     user = find_user_by_login(login)
     if user != 0:
-        return {"calls": user['calls']}
-    return {"error": "user not find", "code": 1}
+        return {'calls': user['calls']}
+    return {'error': 'user not find', 'code': 1}
 
 
 @app.route('/add_user', methods=['POST'])
@@ -94,8 +94,7 @@ def add_user():
 
     user = find_user_by_login(login)
     if user != 0:
-        return {"error": "user with this login is contains", "code": 2}
-
+        return {'error': 'user with this login is contains', 'code': 2}
     users.append({
         'login': login,
         'username': username,
@@ -109,13 +108,13 @@ def add_user():
         'calls': [],
         'chats': []
     })
-
+    stories[login] = []
     user_id += 1
     return {
-        "login": login,
-        "username": username,
-        "password": password,
-        "created": True
+        'login': login,
+        'username': username,
+        'password': password,
+        'created': True
     }
 
 
@@ -125,29 +124,29 @@ def add_contact():
     user_login = data['user_login']
     contact_login = data['contact_login']
     if user_login == contact_login:
-        return {"error": "you can't add you to your contacts", "code": 3}
+        return {'error': 'you can\'t add you to your contacts', 'code': 3}
     user = find_user_by_login(user_login)
     contact = find_user_by_login(contact_login)
     if user != 0 and contact != 0:
         for cont in user['contacts']:
             if cont['login'] == contact_login:
-                return {"error": "the contact was contains", "code": 5}
+                return {'error': 'the contact was contains', 'code': 5}
         user['contacts'] += [
             {
-                "login": contact['login'],
-                "username": contact['username'],
-                "profile_image": contact['profile_image'],
-                "user_id": contact['user_id'],
-                "status": contact['status']
+                'login': contact['login'],
+                'username': contact['username'],
+                'profile_image': contact['profile_image'],
+                'user_id': contact['user_id'],
+                'status': contact['status']
             }
         ]
         return {
-            "login": contact['login'],
-            "username": contact['username'],
-            "profile_image": contact['profile_image'],
-            "user_id": contact['user_id']
+            'login': contact['login'],
+            'username': contact['username'],
+            'profile_image': contact['profile_image'],
+            'user_id': contact['user_id']
         }
-    return {"error": "user not find", "code": 1}
+    return {'error': 'user not find', 'code': 1}
 
 
 @app.route('/send_message', methods=['POST'])
@@ -156,9 +155,9 @@ def add_message():
     sender_login = data['sender_login']
     chat_name = data['chat_name']
     text = data['text']
-    new_message = {"chat_name": chat_name, "sender_login": sender_login, "text": text, "time": time.time()}
+    new_message = {'chat_name': chat_name, 'sender_login': sender_login, 'text': text, 'time': time.time()}
     messages.append(new_message)
-    return {"message_sent": True}
+    return {'message_sent': True}
 
 
 @app.route('/add_chats', methods=['POST'])
@@ -172,22 +171,22 @@ def add_chats():
     if user != 0 and contact != 0:
         for chat in user['chats']:
             if chat['login'] == contact_login:
-                return {"error": "the chat was contains", "code": 9}
+                return {'error': 'the chat was contains', 'code': 9}
         user['chats'] += [
             {
-                "login": contact['login'],
-                "username": contact['username'],
-                "profile_image": contact['profile_image'],
-                "last_msg": last_msg
+                'login': contact['login'],
+                'username': contact['username'],
+                'profile_image': contact['profile_image'],
+                'last_msg': last_msg
             }
         ]
         return {
-            "login": contact['login'],
-            "username": contact['username'],
-            "profile_image": contact['profile_image'],
-            "last_msg": last_msg
+            'login': contact['login'],
+            'username': contact['username'],
+            'profile_image': contact['profile_image'],
+            'last_msg': last_msg
         }
-    return {"error": "user not find", "code": 1}
+    return {'error': 'user not find', 'code': 1}
 
 
 @app.route('/add_story', methods=['POST'])
@@ -199,13 +198,13 @@ def add_story():
     user = find_user_by_login(login)
     profile_image = user['profile_image']
 
-    stories.append({
-        "login": login,
-        "profile_image": profile_image,
-        "path": path
+    stories[login].append({
+        'login': login,
+        'profile_image': profile_image,
+        'path': path
     })
 
-    return {"story_added": True}
+    return {'story_added': True}
 
 
 @app.route('/add_calls', methods=['POST'])
@@ -220,21 +219,21 @@ def add_calls():
     if user != 0 and contact != 0:
         user['calls'] += [
             {
-                "login": contact['login'],
-                "username": contact['username'],
-                "profile_image": contact['profile_image'],
-                "call_status": call_status,
-                "call_time": call_time
+                'login': contact['login'],
+                'username': contact['username'],
+                'profile_image': contact['profile_image'],
+                'call_status': call_status,
+                'call_time': call_time
             }
         ]
         return {
-            "login": contact['login'],
-            "username": contact['username'],
-            "profile_image": contact['profile_image'],
-            "call_status": call_status,
-            "call_time": call_time
+            'login': contact['login'],
+            'username': contact['username'],
+            'profile_image': contact['profile_image'],
+            'call_status': call_status,
+            'call_time': call_time
         }
-    return {"error": "user not find", "code": 1}
+    return {'error': 'user not find', 'code': 1}
 
 
 @app.route('/delete_user', methods=['POST'])
@@ -248,10 +247,10 @@ def delete_user():
         if users[i]['login'] == user_login:
             users.pop(i)
 
-    return {"login": user_login}
+    return {'login': user_login}
 
 
-@app.route("/delete_contact", methods=['POST'])
+@app.route('/delete_contact', methods=['POST'])
 def delete_contact():
     data = request.json
     user_login = data['user_login']
@@ -263,8 +262,8 @@ def delete_contact():
                 user['contacts'].pop(j)
                 break
     return {
-        "login": user_login,
-        "contact": contact_login
+        'login': user_login,
+        'contact': contact_login
     }
 
 
@@ -283,8 +282,8 @@ def update_username():
                 user_contact['username'] = new_username
 
     return {
-        "login": user_login,
-        "username": new_username
+        'login': user_login,
+        'username': new_username
     }
 
 
@@ -298,8 +297,8 @@ def update_password():
         user['password'] = new_password
 
     return {
-        "login": user_login,
-        "password": new_password
+        'login': user_login,
+        'password': new_password
     }
 
 
@@ -317,8 +316,8 @@ def update_status():
                 c['status'] = new_status
 
     return {
-        "login": login,
-        "status": new_status
+        'login': login,
+        'status': new_status
     }
 
 
@@ -339,8 +338,8 @@ def update_contact_status():
                 c['status'] = new_status
 
     return {
-        "login": login,
-        "status": new_status
+        'login': login,
+        'status': new_status
     }
 
 
@@ -355,12 +354,12 @@ def update_chat_last_message():
         for chat in user['chats']:
             print(chat)
             if chat['login'] == chat_name:
-                print("equals")
+                print('equals')
                 chat['last_msg'] = new_last_msg
     return {
-        "login": login,
-        "chat_name": chat_name,
-        "new_last_msg": new_last_msg
+        'login': login,
+        'chat_name': chat_name,
+        'new_last_msg': new_last_msg
     }
 
 
