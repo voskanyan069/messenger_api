@@ -3,7 +3,7 @@ import time
 
 app = Flask(__name__)
 users = []
-messages = []
+messages = {}
 chats = {}
 contacts = {}
 calls = {}
@@ -17,7 +17,9 @@ def get_server_status():
         'running': True,
         'date': time.time(),
         'users_count': len(users),
-        'messages_count': len(messages)
+        'chats_count': len(chats),
+        'calls_count': len(calls),
+        'stories_count': len(stories)
     }
 
 
@@ -36,10 +38,9 @@ def get_user(login):
 
 @app.route('/get_messages/<chat_name>')
 def get_messages(chat_name):
-    last_message = float(request.args['last_message'])
-    ret_data = [message for message in messages if chat_name == message['chat_name']]
-    ret_data = [message for message in ret_data if last_message < message['time']]
-    return {'messages': ret_data}
+    last_msg_time = float(request.args['last_msg_time'])
+    # ret_data = [message for message in chats[chat_name]['messages'] if last_message < message['time']]
+    return {'messages': messages}
 
 
 @app.route('/get_contacts/<login>')
@@ -94,7 +95,6 @@ def add_user():
     login = data['login']
     username = data['username']
     password = data['password']
-
     user = find_user_by_login(login)
     if user != 0:
         return {'error': 'user with this login is contains', 'code': 2}
@@ -112,7 +112,6 @@ def add_user():
     stories[login] = []
     calls[login] = []
     chats[login] = []
-
     user_id += 1
     return {
         'login': login,
@@ -153,15 +152,20 @@ def add_contact():
     return {'error': 'user not find', 'code': 1}
 
 
-# TODO
 @app.route('/send_message', methods=['POST'])
-def add_message():
+def send_message():
     data = request.json
     sender_login = data['sender_login']
     chat_name = data['chat_name']
     text = data['text']
-    new_message = {'chat_name': chat_name, 'sender_login': sender_login, 'text': text, 'time': time.time()}
-    messages.append(new_message)
+    if not messages.__contains__(chat_name):
+        messages[chat_name] = []
+    messages[chat_name].append({
+        'chat_name': chat_name,
+        'sender_login': sender_login,
+        'text': text,
+        'time': time.time()
+    })
     return {'message_sent': True}
 
 
@@ -171,9 +175,8 @@ def add_chats():
     user_login = data['user_login']
     contact_login = data['contact_login']
     last_msg = data['last_msg']
-    user = find_user_by_login(user_login)
     contact = find_user_by_login(contact_login)
-    if user != 0 and contact != 0:
+    if contact != 0:
         for chat in chats[user_login]:
             if chat['login'] == contact_login:
                 return {'error': 'the chat was contains', 'code': 9}
@@ -183,7 +186,6 @@ def add_chats():
                 'username': contact['username'],
                 'profile_image': contact['profile_image'],
                 'last_msg': last_msg,
-                'messages': []
             }
         ]
         return {
@@ -200,16 +202,13 @@ def add_story():
     data = request.json
     login = data['login']
     path = data['path']
-
     user = find_user_by_login(login)
     profile_image = user['profile_image']
-
     stories[login].append({
         'login': login,
         'profile_image': profile_image,
         'path': path
     })
-
     return {'story_added': True}
 
 
@@ -299,7 +298,6 @@ def update_password():
     user = find_user_by_login(user_login)
     if user != 0:
         user['password'] = new_password
-
     return {
         'login': user_login,
         'password': new_password

@@ -1,5 +1,5 @@
 #!/bin/bash
 
 ./add_users.sh
-./add_contact.sh
-./update_status.sh
+./add_chats.sh
+./add_messages.sh
