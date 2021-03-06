@@ -332,7 +332,7 @@ def update_chat_last_message():
     new_last_msg = data['new_last_msg']
     user = find_user_by_login(login)
     if user != 0:
-        for chat in user['chats']:
+        for chat in chats[login]:
             if chat['login'] == chat_name:
                 chat['last_msg'] = new_last_msg
     return {
