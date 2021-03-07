@@ -42,19 +42,31 @@ def get_messages(login, chat_name):
     if login == chat_name:
         return {"error": "login and chat_name can not be same", "code": 10}
     if not messages.__contains__(login):
-        return {"error": "messages for this user not find", "code": 11}
-    try:
-        chat = messages[login][chat_name]
-    except KeyError:
-        return {"error": "chat with this user not find", "code": 12}
-    last_msg_time = float(request.args['last_msg_time'])
-    filtered_messages = [message for message in chat if last_msg_time < message['time']]
-    return {'messages': filtered_messages}
+        messages[login] = {}
+    if not messages[login].__contains__(chat_name):
+        messages[login][chat_name] = []
+    return {'messages': messages[login][chat_name]}
 
 
-@app.route('/get_new_messages/<chat_name>')
-def get_new_messages(chat_name):
-    return {'messages': new_messages[chat_name]}
+@app.route('/get_new_messages', methods=['POST'])
+def get_new_messages():
+    data = request.json
+    login = data['login']
+    chat_name = data['chat_name']
+    if login == chat_name:
+        return {"error": "login and chat_name can not be same", "code": 10}
+    if not messages.__contains__(login):
+        messages[login] = {}
+    if not messages[login].__contains__(chat_name):
+        messages[login][chat_name] = []
+    if not new_messages.__contains__(login):
+        return {"error": "not new messages for login", "code": 12}
+    if not new_messages[login].__contains__(chat_name):
+        return {"error": "not new messages for this chat", "code": 13}
+    for i in range(len(new_messages[login][chat_name])):
+        messages[login][chat_name].append(new_messages[login][chat_name][i])
+        new_messages[login][chat_name].pop(i)
+    return {'messages': 'updated'}
 
 
 @app.route('/get_contacts/<login>')
@@ -174,15 +186,15 @@ def send_message():
     text = data['text']
     if sender_login == chat_name:
         return {"error": "login and chat_name can not be same", "code": 10}
-    if not messages.__contains__(chat_name):
-        messages[chat_name] = {}
+    if not new_messages.__contains__(chat_name):
+        new_messages[chat_name] = {}
     if not messages.__contains__(sender_login):
         messages[sender_login] = {}
-    if not messages[chat_name].__contains__(sender_login):
-        messages[chat_name][sender_login] = []
+    if not new_messages[chat_name].__contains__(sender_login):
+        new_messages[chat_name][sender_login] = []
     if not messages[sender_login].__contains__(chat_name):
         messages[sender_login][chat_name] = []
-    messages[chat_name][sender_login].append({
+    new_messages[chat_name][sender_login].append({
         'chat_name': chat_name,
         'sender_login': sender_login,
         'text': text,
