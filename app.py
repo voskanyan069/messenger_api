@@ -9,6 +9,7 @@ chats = {}
 contacts = {}
 calls = {}
 stories = {}
+contacts_stories = {}
 user_id = 0
 
 
@@ -93,17 +94,17 @@ def get_chats(login):
     return {'error': 'user not find', 'code': 1}
 
 
-@app.route('/get_stories')
-def get_stories():
-    return {'stories': stories}
-
-
 @app.route('/get_stories/<login>')
-def get_stories_login(login):
-    story = find_stories_by_login(login)
-    if story != 0:
-        return {'stories': stories}
-    return {'error': 'stories not find', 'code': 8}
+def get_stories(login):
+    user = find_user_by_login(login)
+    if user != 0:
+        return {'stories': stories[login]}
+    return {'error': 'user not find', 'code': 1}
+
+
+@app.route('/get_stories')
+def get_all_stories():
+    return {"stories": stories}
 
 
 @app.route('/get_calls/<login>')
@@ -243,13 +244,15 @@ def add_story():
     login = data['login']
     path = data['path']
     user = find_user_by_login(login)
-    profile_image = user['profile_image']
-    stories[login].append({
-        'login': login,
-        'profile_image': profile_image,
-        'path': path
-    })
-    return {'story_added': True}
+    if user != 0:
+        profile_image = user['profile_image']
+        stories[login].append({
+            'login': login,
+            'profile_image': profile_image,
+            'path': path
+        })
+        return {'story_added': True}
+    return {'story_added': False}
 
 
 @app.route('/add_calls', methods=['POST'])
