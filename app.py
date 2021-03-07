@@ -4,6 +4,7 @@ import time
 app = Flask(__name__)
 users = []
 messages = {}
+new_messages = {}
 chats = {}
 contacts = {}
 calls = {}
@@ -36,11 +37,24 @@ def get_user(login):
     return {'error': 'user not find', 'code': 1}
 
 
-@app.route('/get_messages/<chat_name>')
-def get_messages(chat_name):
+@app.route('/get_messages/<login>/<chat_name>')
+def get_messages(login, chat_name):
+    if login == chat_name:
+        return {"error": "login and chat_name can not be same", "code": 10}
+    if not messages.__contains__(login):
+        return {"error": "messages for this user not find", "code": 11}
+    try:
+        chat = messages[login][chat_name]
+    except KeyError:
+        return {"error": "chat with this user not find", "code": 12}
     last_msg_time = float(request.args['last_msg_time'])
-    # ret_data = [message for message in chats[chat_name]['messages'] if last_message < message['time']]
-    return {'messages': messages}
+    filtered_messages = [message for message in chat if last_msg_time < message['time']]
+    return {'messages': filtered_messages}
+
+
+@app.route('/get_new_messages/<chat_name>')
+def get_new_messages(chat_name):
+    return {'messages': new_messages[chat_name]}
 
 
 @app.route('/get_contacts/<login>')
@@ -158,9 +172,23 @@ def send_message():
     sender_login = data['sender_login']
     chat_name = data['chat_name']
     text = data['text']
+    if sender_login == chat_name:
+        return {"error": "login and chat_name can not be same", "code": 10}
     if not messages.__contains__(chat_name):
-        messages[chat_name] = []
-    messages[chat_name].append({
+        messages[chat_name] = {}
+    if not messages.__contains__(sender_login):
+        messages[sender_login] = {}
+    if not messages[chat_name].__contains__(sender_login):
+        messages[chat_name][sender_login] = []
+    if not messages[sender_login].__contains__(chat_name):
+        messages[sender_login][chat_name] = []
+    messages[chat_name][sender_login].append({
+        'chat_name': chat_name,
+        'sender_login': sender_login,
+        'text': text,
+        'time': time.time()
+    })
+    messages[sender_login][chat_name].append({
         'chat_name': chat_name,
         'sender_login': sender_login,
         'text': text,
