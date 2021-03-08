@@ -136,7 +136,14 @@ def add_user():
         'status': 'online',
     })
     contacts[login] = []
-    stories[login] = []
+    stories[login] = {
+        "login": login,
+        "username": username,
+        "profile_image": 'https://images.unsplash.com/photo-1614676367446-17828873a71c?ixid'
+                         '=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=675&q'
+                         '=80',
+        "media_path": []
+    }
     calls[login] = []
     chats[login] = []
     user_id += 1
@@ -245,12 +252,7 @@ def add_story():
     path = data['path']
     user = find_user_by_login(login)
     if user != 0:
-        profile_image = user['profile_image']
-        stories[login].append({
-            'login': login,
-            'profile_image': profile_image,
-            'path': path
-        })
+        stories[login]['media_path'].append(path)
         return {'story_added': True}
     return {'story_added': False}
 
