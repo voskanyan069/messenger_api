@@ -1,4 +1,5 @@
 from flask import Flask, request
+import threading
 import time
 
 app = Flask(__name__)
@@ -11,6 +12,7 @@ calls = {}
 stories = {}
 contacts_stories = {}
 user_id = 0
+day_in_seconds = 86400
 
 
 @app.route('/')
@@ -234,13 +236,15 @@ def add_chats():
                 'username': contact['username'],
                 'profile_image': contact['profile_image'],
                 'last_msg': last_msg,
+                'status': contact['status']
             }
         ]
         return {
             'login': contact['login'],
             'username': contact['username'],
             'profile_image': contact['profile_image'],
-            'last_msg': last_msg
+            'last_msg': last_msg,
+            'status': contact['status']
         }
     return {'error': 'user not find', 'code': 1}
 
@@ -252,7 +256,10 @@ def add_story():
     path = data['path']
     user = find_user_by_login(login)
     if user != 0:
-        stories[login]['media_path'].append(path)
+        stories[login]['media_path'].append({
+            "path": path,
+            "time": time.time()
+        })
         return {'story_added': True}
     return {'story_added': False}
 
@@ -361,6 +368,10 @@ def update_status():
         for cont in contacts[contact]:
             if cont['login'] == login:
                 cont['status'] = new_status
+    for chat in chats:
+        for c in chats[chat]:
+            if c['login'] == login:
+                c['status'] = new_status
     return {
         'login': login,
         'status': new_status
@@ -397,6 +408,16 @@ def find_stories_by_login(user_login):
         if story['login'] == user_login:
             return story
     return 0
+
+
+def delete_stories():
+    while True:
+        print('check')
+        for user in users:
+            login = user['login']
+            for story in stories[login]['media_path']:
+                print(story['time'])
+        time.sleep(2)
 
 
 if __name__ == '__main__':
