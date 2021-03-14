@@ -191,32 +191,78 @@ def add_contact():
 @app.route('/send_message', methods=['POST'])
 def send_message():
     data = request.json
-    sender_login = data['sender_login']
-    chat_name = data['chat_name']
-    text = data['text']
-    if sender_login == chat_name:
-        return {"error": "login and chat_name can not be same", "code": 10}
-    if not new_messages.__contains__(chat_name):
-        new_messages[chat_name] = {}
-    if not messages.__contains__(sender_login):
-        messages[sender_login] = {}
-    if not new_messages[chat_name].__contains__(sender_login):
-        new_messages[chat_name][sender_login] = []
-    if not messages[sender_login].__contains__(chat_name):
-        messages[sender_login][chat_name] = []
-    new_messages[chat_name][sender_login].append({
-        'chat_name': chat_name,
-        'sender_login': sender_login,
-        'text': text,
-        'time': time.time()
-    })
-    messages[sender_login][chat_name].append({
-        'chat_name': chat_name,
-        'sender_login': sender_login,
-        'text': text,
-        'time': time.time()
-    })
-    return {'message_sent': True}
+    sender_login = data['login']
+    chat_name = data['chat_login']
+    text = data['message_text']
+    user = find_user_by_login(sender_login)
+    another_user = find_user_by_login(chat_name)
+    if user != 0 and another_user != 0:
+        if sender_login == chat_name:
+            return {"error": "login and chat_name can not be same", "code": 10}
+
+        if len(chats[chat_name]) != 0:
+            for chat in chats[chat_name]:
+                if sender_login == chat['login']:
+                    chats[chat_name] += [
+                        {
+                            'login': user['login'],
+                            'username': user['username'],
+                            'profile_image': user['profile_image'],
+                            'status': user['status']
+                        }
+                    ]
+        else:
+            chats[chat_name] += [
+                {
+                    'login': user['login'],
+                    'username': user['username'],
+                    'profile_image': user['profile_image'],
+                    'status': user['status']
+                }
+            ]
+            print("EMPTY LIST")
+        if not chats.__contains__(sender_login):
+            chats[sender_login] += [
+                {
+                    'login': another_user['login'],
+                    'username': another_user['username'],
+                    'profile_image': another_user['profile_image'],
+                    'status': another_user['status']
+                }
+            ]
+        else:
+            print("SENDER_LOGIN CONTAINS - " + str(chats))
+
+        if not messages.__contains__(chat_name):
+            messages[chat_name] = {}
+        if not messages.__contains__(sender_login):
+            messages[sender_login] = {}
+        if not messages[chat_name].__contains__(sender_login):
+            messages[chat_name][sender_login] = []
+        if not messages[sender_login].__contains__(chat_name):
+            messages[sender_login][chat_name] = []
+        messages[chat_name][sender_login].append({
+            'chat_login': chat_name,
+            'login': sender_login,
+            'message_text': text,
+            'message_time': time.time(),
+            'profile_image': user['profile_image']
+        })
+        messages[sender_login][chat_name].append({
+            'chat_login': chat_name,
+            'login': sender_login,
+            'message_text': text,
+            'message_time': time.time(),
+            'profile_image': user['profile_image']
+        })
+        for chat in chats[sender_login]:
+            if chat['login'] == chat_name:
+                chat['last_msg'] = 'You: ' + text
+        for chat in chats[chat_name]:
+            if chat['login'] == sender_login:
+                chat['last_msg'] = text
+        return {'message_sent': True}
+    return {'error': 'user not find', 'code': 1}
 
 
 @app.route('/add_chats', methods=['POST'])
