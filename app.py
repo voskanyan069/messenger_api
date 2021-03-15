@@ -1,5 +1,4 @@
 from flask import Flask, request
-import threading
 import time
 
 app = Flask(__name__)
@@ -191,107 +190,65 @@ def add_contact():
 @app.route('/send_message', methods=['POST'])
 def send_message():
     data = request.json
-    sender_login = data['login']
-    chat_name = data['chat_login']
-    text = data['message_text']
-    user = find_user_by_login(sender_login)
-    another_user = find_user_by_login(chat_name)
-    if user != 0 and another_user != 0:
-        if sender_login == chat_name:
-            return {"error": "login and chat_name can not be same", "code": 10}
-
-        if len(chats[chat_name]) != 0:
-            for chat in chats[chat_name]:
-                if sender_login == chat['login']:
-                    chats[chat_name] += [
-                        {
-                            'login': user['login'],
-                            'username': user['username'],
-                            'profile_image': user['profile_image'],
-                            'status': user['status']
-                        }
-                    ]
-        else:
-            chats[chat_name] += [
-                {
-                    'login': user['login'],
-                    'username': user['username'],
-                    'profile_image': user['profile_image'],
-                    'status': user['status']
-                }
-            ]
-            print("EMPTY LIST")
-        if not chats.__contains__(sender_login):
-            chats[sender_login] += [
-                {
-                    'login': another_user['login'],
-                    'username': another_user['username'],
-                    'profile_image': another_user['profile_image'],
-                    'status': another_user['status']
-                }
-            ]
-        else:
-            print("SENDER_LOGIN CONTAINS - " + str(chats))
-
-        if not messages.__contains__(chat_name):
-            messages[chat_name] = {}
-        if not messages.__contains__(sender_login):
-            messages[sender_login] = {}
-        if not messages[chat_name].__contains__(sender_login):
-            messages[chat_name][sender_login] = []
-        if not messages[sender_login].__contains__(chat_name):
-            messages[sender_login][chat_name] = []
-        messages[chat_name][sender_login].append({
-            'chat_login': chat_name,
-            'login': sender_login,
-            'message_text': text,
-            'message_time': time.time(),
-            'profile_image': user['profile_image']
-        })
-        messages[sender_login][chat_name].append({
-            'chat_login': chat_name,
-            'login': sender_login,
-            'message_text': text,
-            'message_time': time.time(),
-            'profile_image': user['profile_image']
-        })
-        for chat in chats[sender_login]:
-            if chat['login'] == chat_name:
-                chat['last_msg'] = 'You: ' + text
-        for chat in chats[chat_name]:
-            if chat['login'] == sender_login:
-                chat['last_msg'] = text
-        return {'message_sent': True}
-    return {'error': 'user not find', 'code': 1}
-
-
-@app.route('/add_chats', methods=['POST'])
-def add_chats():
-    data = request.json
-    user_login = data['user_login']
-    contact_login = data['contact_login']
-    last_msg = data['last_msg']
-    contact = find_user_by_login(contact_login)
-    if contact != 0:
-        for chat in chats[user_login]:
-            if chat['login'] == contact_login:
-                return {'error': 'the chat was contains', 'code': 9}
-        chats[user_login] += [
-            {
-                'login': contact['login'],
-                'username': contact['username'],
-                'profile_image': contact['profile_image'],
-                'last_msg': last_msg,
-                'status': contact['status']
-            }
-        ]
-        return {
-            'login': contact['login'],
-            'username': contact['username'],
-            'profile_image': contact['profile_image'],
-            'last_msg': last_msg,
-            'status': contact['status']
+    login = data['login']
+    chat_login = data['chat_login']
+    message_text = data['message_text']
+    user = find_user_by_login(login)
+    chat_user = find_user_by_login(chat_login)
+    if user != 0 and chat_user != 0:
+        new_login_chat = {
+            'login': chat_user['login'],
+            'username': chat_user['username'],
+            'profile_image': chat_user['profile_image'],
+            'last_msg': message_text,
+            'status': chat_user['status']
         }
+        new_chat_login_chat = {
+            'login': user['login'],
+            'username': user['username'],
+            'profile_image': user['profile_image'],
+            'last_msg': message_text,
+            'status': user['status']
+        }
+        extend = False
+        for chat in chats[login]:
+            if chat_login == chat['login']:
+                extend = True
+                break
+        if not extend:
+            chats[login] += [new_login_chat]
+        extend = False
+        for chat in chats[chat_login]:
+            if login == chat['login']:
+                extend = True
+                break
+        if not extend:
+            chats[chat_login] += [new_chat_login_chat]
+        if not messages.__contains__(login):
+            messages[login] = {}
+        if not messages.__contains__(chat_login):
+            messages[chat_login] = {}
+        if not messages[login].__contains__(chat_login):
+            messages[login][chat_login] = []
+        if not messages[chat_login].__contains__(login):
+            messages[chat_login][login] = []
+        new_message = {
+                    'chat_login': chat_login,
+                    'login': login,
+                    'username': chat_user['username'],
+                    'profile_image': chat_user['profile_image'],
+                    'message_text': message_text,
+                    'message_time': time.time()
+        }
+        messages[login][chat_login].append(new_message)
+        messages[chat_login][login].append(new_message)
+        for chat in chats[login]:
+            if chat['login'] == chat_login:
+                chat['last_msg'] = 'You: ' + message_text
+        for chat in chats[chat_login]:
+            if chat['login'] == login:
+                chat['last_msg'] = message_text
+        return {'message_sent': True}
     return {'error': 'user not find', 'code': 1}
 
 
@@ -377,11 +334,18 @@ def update_username():
     user = find_user_by_login(user_login)
     if user != 0:
         user['username'] = new_username
-    print(contacts)
     for contact in contacts:
         for cont in contacts[contact]:
             if cont['login'] == user_login:
                 cont['username'] = new_username
+    for chat in chats:
+        for c in chats[chat]:
+            if c['login'] == user_login:
+                c['username'] = new_username
+    for call in calls:
+        for c in calls[call]:
+            if c['login'] == user_login:
+                c['username'] = new_username
     return {
         'login': user_login,
         'username': new_username
@@ -418,27 +382,13 @@ def update_status():
         for c in chats[chat]:
             if c['login'] == login:
                 c['status'] = new_status
+    for call in calls:
+        for c in calls[call]:
+            if c['login'] == login:
+                c['status'] = new_status
     return {
         'login': login,
         'status': new_status
-    }
-
-
-@app.route('/update_chat_last_message', methods=['POST'])
-def update_chat_last_message():
-    data = request.json
-    login = data['user_login']
-    chat_name = data['chat_name']
-    new_last_msg = data['new_last_msg']
-    user = find_user_by_login(login)
-    if user != 0:
-        for chat in chats[login]:
-            if chat['login'] == chat_name:
-                chat['last_msg'] = new_last_msg
-    return {
-        'login': login,
-        'chat_name': chat_name,
-        'new_last_msg': new_last_msg
     }
 
 
