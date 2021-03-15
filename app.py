@@ -41,13 +41,15 @@ def get_user(login):
 
 @app.route('/get_messages/<login>/<chat_name>')
 def get_messages(login, chat_name):
+    after = request.args.get('after', '0')
     if login == chat_name:
         return {"error": "login and chat_name can not be same", "code": 10}
     if not messages.__contains__(login):
         messages[login] = {}
     if not messages[login].__contains__(chat_name):
         messages[login][chat_name] = []
-    return {'messages': messages[login][chat_name]}
+    ret_messages = [message for message in messages[login][chat_name] if message['message_time'] > float(after)]
+    return {'messages': ret_messages}
 
 
 @app.route('/get_new_messages', methods=['POST'])
