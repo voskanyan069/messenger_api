@@ -19,10 +19,6 @@ def get_server_status():
     return {
         'running': True,
         'date': time.time(),
-        'users_count': len(users),
-        'chats_count': len(chats),
-        'calls_count': len(calls),
-        'stories_count': len(stories)
     }
 
 
@@ -71,6 +67,14 @@ def get_new_messages():
         messages[login][chat_name].append(new_messages[login][chat_name][i])
         new_messages[login][chat_name].pop(i)
     return {'messages': 'updated'}
+
+
+@app.route('/get_status/<login>')
+def get_status(login):
+    user = find_user_by_login(login)
+    if user != 0:
+        return {'status': user['status']}
+    return {'error': 'user not find', 'code': 1}
 
 
 @app.route('/get_contacts/<login>')
@@ -161,7 +165,7 @@ def add_user():
 @app.route('/add_contact', methods=['POST'])
 def add_contact():
     data = request.json
-    user_login = data['user_login']
+    user_login = data['login']
     contact_login = data['contact_login']
     if user_login == contact_login:
         return {'error': 'you can\'t add you to your contacts', 'code': 3}
@@ -180,12 +184,7 @@ def add_contact():
                 'status': contact['status']
             }
         ]
-        return {
-            'login': contact['login'],
-            'username': contact['username'],
-            'profile_image': contact['profile_image'],
-            'user_id': contact['user_id']
-        }
+        return {'contact_added': True}
     return {'error': 'user not find', 'code': 1}
 
 
@@ -235,12 +234,12 @@ def send_message():
         if not messages[chat_login].__contains__(login):
             messages[chat_login][login] = []
         new_message = {
-                    'chat_login': chat_login,
-                    'login': login,
-                    'username': chat_user['username'],
-                    'profile_image': chat_user['profile_image'],
-                    'message_text': message_text,
-                    'message_time': time.time()
+               'chat_login': chat_login,
+               'login': login,
+               'username': user['username'],
+               'profile_image': user['profile_image'],
+               'message_text': message_text,
+               'message_time': time.time()
         }
         messages[login][chat_login].append(new_message)
         messages[chat_login][login].append(new_message)
@@ -272,7 +271,7 @@ def add_story():
 @app.route('/add_calls', methods=['POST'])
 def add_calls():
     data = request.json
-    user_login = data['user_login']
+    user_login = data['login']
     contact_login = data['contact_login']
     call_status = data['call_status']
     call_time = data['call_time']
@@ -284,37 +283,35 @@ def add_calls():
                 'login': contact['login'],
                 'username': contact['username'],
                 'profile_image': contact['profile_image'],
+                'status': contact['status'],
                 'call_status': call_status,
                 'call_time': call_time
             }
         ]
-        return {
-            'login': contact['login'],
-            'username': contact['username'],
-            'profile_image': contact['profile_image'],
-            'call_status': call_status,
-            'call_time': call_time
-        }
-    return {'error': 'user not find', 'code': 1}
+        return {'call_added': True}
+    return {'call_added': False}
 
 
 @app.route('/delete_user', methods=['POST'])
 def delete_user():
     data = request.json
-    user_login = data['user_login']
-    for contact in contacts:
-        if contact['login'] == user_login:
-            contact['login'] = 'Deleted account'
-    for user in users:
-        if user['login'] == user_login:
-            users.pop(user)
-    return {'login': user_login}
+    login = data['login']
+    user = find_user_by_login(login)
+    if user != 0:
+        for contact in contacts:
+            if contact['login'] == login:
+                contact['login'] = 'Deleted account'
+        for user in users:
+            if user['login'] == login:
+                users.pop(user)
+        return {'deleted': True}
+    return {'deleted': False}
 
 
 @app.route('/delete_contact', methods=['POST'])
 def delete_contact():
     data = request.json
-    user_login = data['user_login']
+    user_login = data['login']
     contact_login = data['contact_login']
     user = find_user_by_login(user_login)
     if user != 0:
@@ -322,16 +319,14 @@ def delete_contact():
             if contact['login'] == contact_login:
                 contacts.pop(contact)
                 break
-    return {
-        'login': user_login,
-        'contact': contact_login
-    }
+        return {'deleted': True}
+    return {'deleted': False}
 
 
 @app.route('/update_username', methods=['POST'])
 def update_username():
     data = request.json
-    user_login = data['user_login']
+    user_login = data['login']
     new_username = data['new_username']
     user = find_user_by_login(user_login)
     if user != 0:
@@ -357,7 +352,7 @@ def update_username():
 @app.route('/update_password', methods=['POST'])
 def update_password():
     data = request.json
-    user_login = data['user_login']
+    user_login = data['login']
     new_password = data['new_password']
     user = find_user_by_login(user_login)
     if user != 0:
@@ -371,27 +366,25 @@ def update_password():
 @app.route('/update_status', methods=['POST'])
 def update_status():
     data = request.json
-    login = data['user_login']
+    login = data['login']
     new_status = data['new_status']
     user = find_user_by_login(login)
     if user != 0:
         user['status'] = new_status
-    for contact in contacts:
-        for cont in contacts[contact]:
-            if cont['login'] == login:
-                cont['status'] = new_status
-    for chat in chats:
-        for c in chats[chat]:
-            if c['login'] == login:
-                c['status'] = new_status
-    for call in calls:
-        for c in calls[call]:
-            if c['login'] == login:
-                c['status'] = new_status
-    return {
-        'login': login,
-        'status': new_status
-    }
+        for contact in contacts:
+            for cont in contacts[contact]:
+                if cont['login'] == login:
+                    cont['status'] = new_status
+        for chat in chats:
+            for c in chats[chat]:
+                if c['login'] == login:
+                    c['status'] = new_status
+        for call in calls:
+            for c in calls[call]:
+                if c['login'] == login:
+                    c['status'] = new_status
+        return {'updated': True}
+    return {'updated': False}
 
 
 def find_user_by_login(user_login):
