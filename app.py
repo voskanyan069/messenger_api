@@ -234,12 +234,12 @@ def send_message():
         if not messages[chat_login].__contains__(login):
             messages[chat_login][login] = []
         new_message = {
-               'chat_login': chat_login,
-               'login': login,
-               'username': user['username'],
-               'profile_image': user['profile_image'],
-               'message_text': message_text,
-               'message_time': time.time()
+            'chat_login': chat_login,
+            'login': login,
+            'username': user['username'],
+            'profile_image': user['profile_image'],
+            'message_text': message_text,
+            'message_time': time.time()
         }
         messages[login][chat_login].append(new_message)
         messages[chat_login][login].append(new_message)
@@ -311,14 +311,15 @@ def delete_user():
 @app.route('/delete_contact', methods=['POST'])
 def delete_contact():
     data = request.json
-    user_login = data['login']
+    login = data['login']
     contact_login = data['contact_login']
-    user = find_user_by_login(user_login)
+    user = find_user_by_login(login)
     if user != 0:
         for contact in contacts:
-            if contact['login'] == contact_login:
-                contacts.pop(contact)
-                break
+            for c in range(len(contacts[contact])):
+                if contacts[contact][c]['login'] == contact_login:
+                    contacts[contact].pop(c)
+                    break
         return {'deleted': True}
     return {'deleted': False}
 
