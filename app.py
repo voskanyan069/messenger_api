@@ -44,8 +44,8 @@ def get_messages(login, chat_name):
         messages[login] = {}
     if not messages[login].__contains__(chat_name):
         messages[login][chat_name] = []
-    ret_messages = [message for message in messages[login][chat_name] if message['message_time'] > float(after)]
-    return {'messages': ret_messages}
+    return_data = [message for message in messages[login][chat_name] if message['message_time'] > float(after)]
+    return {'messages': return_data}
 
 
 @app.route('/get_new_messages', methods=['POST'])
@@ -79,9 +79,11 @@ def get_status(login):
 
 @app.route('/get_contacts/<login>')
 def get_contacts(login):
+    query = request.args.get('q', '')
     user = find_user_by_login(login)
     if user != 0:
-        return {'contacts': contacts[login]}
+        return_data = [contact for contact in contacts[login] if contact['username'].lower().find(query.lower()) != -1]
+        return {'contacts': return_data}
     return {'error': 'user not find', 'code': 1}
 
 
@@ -95,9 +97,11 @@ def get_online_status(login):
 
 @app.route('/get_chats/<login>')
 def get_chats(login):
+    query = request.args.get('q', '')
     user = find_user_by_login(login)
     if user != 0:
-        return {'chats': chats[login]}
+        return_data = [chat for chat in chats[login] if chat['username'].lower().find(query.lower()) != -1]
+        return {'chats': return_data}
     return {'error': 'user not find', 'code': 1}
 
 
@@ -116,9 +120,11 @@ def get_all_stories():
 
 @app.route('/get_calls/<login>')
 def get_calls(login):
+    query = request.args.get('q', '')
     user = find_user_by_login(login)
     if user != 0:
-        return {'calls': calls[login]}
+        return_data = [call for call in calls[login] if call['username'].lower().find(query.lower()) != -1]
+        return {'calls': return_data}
     return {'error': 'user not find', 'code': 1}
 
 
@@ -137,18 +143,18 @@ def add_user():
         'username': username,
         'password': password,
         'user_id': id(user_id),
-        'profile_image': 'https://images.unsplash.com/photo-1614676367446-17828873a71c?ixid'
-                         '=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=675&q'
-                         '=80',
+        'profile_image': 'https://firebasestorage.googleapis.com/v0/b/justchat-85e5f.appspot.com/o/users'
+                         '%2Fprofile_images%2Fdefault_profile_image.png?alt=media&token=4034514b-db91-4cc4-a507'
+                         '-f95ca1e4850e',
         'status': 'online',
     })
     contacts[login] = []
     stories[login] = {
         "login": login,
         "username": username,
-        "profile_image": 'https://images.unsplash.com/photo-1614676367446-17828873a71c?ixid'
-                         '=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=675&q'
-                         '=80',
+        "profile_image": 'https://firebasestorage.googleapis.com/v0/b/justchat-85e5f.appspot.com/o/users'
+                         '%2Fprofile_images%2Fdefault_profile_image.png?alt=media&token=4034514b-db91-4cc4-a507'
+                         '-f95ca1e4850e',
         "media_path": []
     }
     calls[login] = []
@@ -250,7 +256,7 @@ def send_message():
             if chat['login'] == login:
                 chat['last_msg'] = message_text
         return {'message_sent': True}
-    return {'error': 'user not find', 'code': 1}
+    return {'message_sent': False}
 
 
 @app.route('/add_story', methods=['POST'])
@@ -328,40 +334,72 @@ def delete_contact():
 def update_username():
     data = request.json
     user_login = data['login']
-    new_username = data['new_username']
+    new_username = data['new_value']
     user = find_user_by_login(user_login)
     if user != 0:
         user['username'] = new_username
-    for contact in contacts:
-        for cont in contacts[contact]:
-            if cont['login'] == user_login:
-                cont['username'] = new_username
-    for chat in chats:
-        for c in chats[chat]:
-            if c['login'] == user_login:
-                c['username'] = new_username
-    for call in calls:
-        for c in calls[call]:
-            if c['login'] == user_login:
-                c['username'] = new_username
-    return {
-        'login': user_login,
-        'username': new_username
-    }
+        for contact in contacts:
+            for c in contacts[contact]:
+                if c['login'] == user_login:
+                    c['username'] = new_username
+        for chat in chats:
+            for c in chats[chat]:
+                if c['login'] == user_login:
+                    c['username'] = new_username
+        for call in calls:
+            for c in calls[call]:
+                if c['login'] == user_login:
+                    c['username'] = new_username
+        stories[user_login]['username'] = new_username
+        # TODO: UPDATE USERNAME IN MESSAGES
+        for message in messages[user_login]:
+            for m in messages[user_login][message]:
+                if m['login'] == user_login:
+                    m['username'] = new_username
+        return {'username_updated': True}
+    return {'username_updated': False}
+
+
+@app.route('/update_profile_image', methods=['POST'])
+def update_profile_image():
+    data = request.json
+    user_login = data['login']
+    new_profile_image = data['new_value']
+    user = find_user_by_login(user_login)
+    if user != 0:
+        user['profile_image'] = new_profile_image
+        for contact in contacts:
+            for c in contacts[contact]:
+                if c['login'] == user_login:
+                    c['profile_image'] = new_profile_image
+        for chat in chats:
+            for c in chats[chat]:
+                if c['login'] == user_login:
+                    c['profile_image'] = new_profile_image
+        for call in calls:
+            for c in calls[call]:
+                if c['login'] == user_login:
+                    c['profile_image'] = new_profile_image
+        stories[user_login]['profile_image'] = new_profile_image
+        # TODO: UPDATE PROFILE_IMAGE IN MESSAGES
+        for message in messages[user_login]:
+            for m in messages[user_login][message]:
+                if m['login'] == user_login:
+                    m['profile_image'] = new_profile_image
+        return {'profile_image_updated': True}
+    return {'profile_image_updated': False}
 
 
 @app.route('/update_password', methods=['POST'])
 def update_password():
     data = request.json
     user_login = data['login']
-    new_password = data['new_password']
+    new_password = data['new_value']
     user = find_user_by_login(user_login)
     if user != 0:
         user['password'] = new_password
-    return {
-        'login': user_login,
-        'password': new_password
-    }
+        return {'password_updated': True}
+    return {'password_updated': False}
 
 
 @app.route('/update_status', methods=['POST'])
