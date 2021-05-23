@@ -1,9 +1,12 @@
 #!/usr/bin/python3
 
 from flask import Flask, request
+from flask_ngrok import run_with_ngrok
 import time
 
 app = Flask(__name__)
+run_with_ngrok(app)
+
 users = []
 messages = {}
 new_messages = {}
@@ -453,4 +456,4 @@ def delete_stories():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run()
